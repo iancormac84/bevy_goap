@@ -1,6 +1,6 @@
 use action::action_state_system;
 use actor::{actor_state_system, build_new_actor_system};
-use bevy::prelude::{CoreStage, IntoSystemDescriptor, Plugin, StageLabel, SystemSet, SystemStage, Startup, First, Last};
+use bevy::{prelude::{Plugin, Startup, First, Last, IntoSystemConfigs, Update}, ecs::schedule::ScheduleLabel};
 
 use planning::{
     create_plan_system, create_planning_state, request_plan_event_handler_system, RequestPlanEvent,
@@ -43,7 +43,7 @@ impl Plugin for GoapPlugin {
             InternalGoapStage::ActionStateTransition,
             SystemStage::parallel(),
         );
-        app.add_system_to_stage(
+        app.add_systems(
             InternalGoapStage::ActionStateTransition,
             action_state_system,
         );
@@ -61,18 +61,16 @@ impl Plugin for GoapPlugin {
             InternalGoapStage::ActorStateTransition,
             SystemStage::parallel(),
         );
-        app.add_system_set_to_stage(
+        app.add_systems(
             InternalGoapStage::ActorStateTransition,
-            SystemSet::new()
-                .with_system(actor_state_system)
-                .with_system(request_plan_event_handler_system.after(actor_state_system)),
+            (actor_state_system, request_plan_event_handler_system.after(actor_state_system)),
         );
 
         app.add_systems(Last, create_plan_system);
     }
 }
 
-#[derive(StageLabel)]
+#[derive(Hash, Debug, Clone, PartialEq, Eq, ScheduleLabel)]
 pub enum GoapStage {
     /// User `Action` systems should be added to this stage.
     Actions,
@@ -80,7 +78,7 @@ pub enum GoapStage {
     Actors,
 }
 
-#[derive(StageLabel)]
+#[derive(Hash, Debug, Clone, PartialEq, Eq, ScheduleLabel)]
 enum InternalGoapStage {
     /// Internal stage to react to changed `ActionState`s from user `Action` systems.
     ActionStateTransition,
