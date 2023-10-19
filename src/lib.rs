@@ -1,6 +1,6 @@
 use action::action_state_system;
 use actor::{actor_state_system, build_new_actor_system};
-use bevy::prelude::{CoreStage, IntoSystemDescriptor, Plugin, StageLabel, SystemSet, SystemStage};
+use bevy::prelude::{CoreStage, IntoSystemDescriptor, Plugin, StageLabel, SystemSet, SystemStage, Startup, First, Last};
 
 use planning::{
     create_plan_system, create_planning_state, request_plan_event_handler_system, RequestPlanEvent,
@@ -26,9 +26,9 @@ impl Plugin for GoapPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.add_event::<RequestPlanEvent>();
 
-        app.add_startup_system(create_planning_state);
+        app.add_systems(Startup, create_planning_state);
 
-        app.add_system_to_stage(CoreStage::First, build_new_actor_system);
+        app.add_systems(First, build_new_actor_system);
 
         // User Action systems should be added to this stage, which can check for progress of Actions after typical user systems (e.g. for movement) complete during Update.
         app.add_stage_after(
@@ -68,7 +68,7 @@ impl Plugin for GoapPlugin {
                 .with_system(request_plan_event_handler_system.after(actor_state_system)),
         );
 
-        app.add_system_to_stage(CoreStage::Last, create_plan_system);
+        app.add_systems(Last, create_plan_system);
     }
 }
 

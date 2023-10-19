@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use bevy::prelude::{Commands, Component, Entity, EventReader, Query};
+use bevy::prelude::{Commands, Component, Entity, EventReader, Query, Event};
 use pathfinding::prelude::astar;
 
 use crate::action::EvaluationResult;
@@ -13,6 +13,7 @@ use crate::{
 
 mod plan_node;
 
+#[derive(Event)]
 pub struct RequestPlanEvent(pub(crate) Entity);
 
 #[derive(Component, Default, Debug)]
@@ -33,7 +34,7 @@ pub fn request_plan_event_handler_system(
 ) {
     let mut planning_state = planning_state_query.single_mut();
 
-    for ev in ev_request_plan.iter() {
+    for ev in ev_request_plan.read() {
         println!("Received RequestPlanEvent");
         let mut should_queue = false;
 

@@ -6,13 +6,13 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bevy = "0.9.1"
+bevy = { git = "https://github.com/bevyengine/bevy.git" }
 bevy-inspector-egui = { version = "0.15.0", optional = true }
 pathfinding = "4.1.1"
 
 [dev-dependencies]
-bevy = "0.9.1"
-rstest = "0.16.0"
+bevy = { git = "https://github.com/bevyengine/bevy.git" }
+rstest = "0.18"
 
 [features]
 inspector = ["dep:bevy-inspector-egui"]
