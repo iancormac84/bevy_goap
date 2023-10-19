@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_goap::{
-    Action, ActionState, Actor, ActorState, Condition, EvaluationResult, GoapPlugin, GoapStage,
+    Action, ActionState, Actor, ActorState, Condition, EvaluationResult, GoapPlugin, GoapSet,
 };
 use environment::*;
 use navigation::{navigation_system, Navigation};
@@ -12,23 +12,27 @@ fn main() {
     let mut app = App::new();
 
     app.add_plugins(DefaultPlugins)
-        .add_plugin(GoapPlugin)
-        .add_startup_system(setup)
-        .add_startup_system(create_lumberjack)
-        .add_startup_system(create_axes_system)
-        .add_startup_system(create_trees_system)
-        .add_system_set_to_stage(
-            GoapStage::Actions,
-            SystemSet::new()
-                .with_system(get_axe_action_system)
-                .with_system(chop_tree_action_system)
-                .with_system(collect_wood_action_system),
+        .add_plugins(GoapPlugin)
+        .add_systems(
+            Startup,
+            (
+                setup,
+                create_lumberjack,
+                create_axes_system,
+                create_trees_system,
+            ),
         )
-        .add_system_set_to_stage(
-            GoapStage::Actors,
-            SystemSet::new().with_system(lumberjack_actor_system),
+        .add_systems(
+            PostUpdate,
+            (
+                get_axe_action_system,
+                chop_tree_action_system,
+                collect_wood_action_system,
+            )
+                .in_set(GoapSet::Actions),
         )
-        .add_system(navigation_system);
+        .add_systems(PostUpdate, lumberjack_actor_system.in_set(GoapSet::Actors))
+        .add_systems(Update, navigation_system);
 
     #[cfg(feature = "inspector")]
     app.add_plugin(bevy_goap::inspector::GoapInspectorPlugin);
@@ -47,7 +51,10 @@ fn setup(
     });
 
     commands.spawn(PbrBundle {
-        mesh: meshes.add(Mesh::from(shape::Plane { size: 100. })),
+        mesh: meshes.add(Mesh::from(shape::Plane {
+            size: 100.,
+            ..Default::default()
+        })),
         material: materials.add(Color::GREEN.into()),
         ..Default::default()
     });

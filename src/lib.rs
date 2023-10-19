@@ -1,6 +1,8 @@
 use action::action_state_system;
 use actor::{actor_state_system, build_new_actor_system};
-use bevy::{prelude::{Plugin, Startup, First, Last, IntoSystemConfigs, Update}, ecs::schedule::ScheduleLabel};
+use bevy::prelude::{
+    First, IntoSystemConfigs, IntoSystemSetConfigs, Last, Plugin, PostUpdate, Startup, SystemSet,
+};
 
 use planning::{
     create_plan_system, create_planning_state, request_plan_event_handler_system, RequestPlanEvent,
@@ -30,58 +32,48 @@ impl Plugin for GoapPlugin {
 
         app.add_systems(First, build_new_actor_system);
 
-        // User Action systems should be added to this stage, which can check for progress of Actions after typical user systems (e.g. for movement) complete during Update.
-        app.add_stage_after(
-            CoreStage::Update,
-            GoapStage::Actions,
-            SystemStage::parallel(),
-        );
-
-        // We add another stage for change detection of completed or failed actions, which may update the ActorState to reflect a completed or failed plan.
-        app.add_stage_after(
-            GoapStage::Actions,
-            InternalGoapStage::ActionStateTransition,
-            SystemStage::parallel(),
-        );
-        app.add_systems(
-            InternalGoapStage::ActionStateTransition,
-            action_state_system,
-        );
-
-        // User Actor systems should be added to this stage, which can react to an Actor's completed or failed plan.
-        app.add_stage_after(
-            InternalGoapStage::ActionStateTransition,
-            GoapStage::Actors,
-            SystemStage::parallel(),
-        );
-
-        // We add another stage for change detection of ActorStates for Actors that may require a new plan.
-        app.add_stage_after(
-            GoapStage::Actors,
-            InternalGoapStage::ActorStateTransition,
-            SystemStage::parallel(),
-        );
-        app.add_systems(
-            InternalGoapStage::ActorStateTransition,
-            (actor_state_system, request_plan_event_handler_system.after(actor_state_system)),
+        // User Action systems should be added to GoapSet::Actions, which can check for progress of Actions after typical user systems (e.g. for movement) complete during Update.
+        // InternalGoapSet::ActionStateTransition runs after, for change detection of completed or failed actions, which may update the ActorState to reflect a completed or failed plan.
+        // User Actor systems should be added to GoapSet::Actors, which can react to an Actor's completed or failed plan.
+        // We add InternalGoapSet::ActorStateTransition for change detection of ActorStates for Actors that may require a new plan.
+        app.configure_sets(
+            PostUpdate,
+            InternalGoapSet::ActionStateTransition.after(GoapSet::Actions),
+        )
+        .configure_sets(
+            PostUpdate,
+            GoapSet::Actors.after(InternalGoapSet::ActionStateTransition),
+        )
+        .configure_sets(
+            PostUpdate,
+            InternalGoapSet::ActorStateTransition.after(GoapSet::Actors),
+        )
+        .add_systems(PostUpdate, action_state_system)
+        .add_systems(
+            PostUpdate,
+            (
+                actor_state_system,
+                request_plan_event_handler_system.after(actor_state_system),
+            )
+                .in_set(InternalGoapSet::ActorStateTransition),
         );
 
         app.add_systems(Last, create_plan_system);
     }
 }
 
-#[derive(Hash, Debug, Clone, PartialEq, Eq, ScheduleLabel)]
-pub enum GoapStage {
-    /// User `Action` systems should be added to this stage.
+#[derive(Hash, Debug, Clone, PartialEq, Eq, SystemSet)]
+pub enum GoapSet {
+    /// User `Action` systems should be added to this system set.
     Actions,
-    /// User `Actor` systems should be added to this stage.
+    /// User `Actor` systems should be added to this system set.
     Actors,
 }
 
-#[derive(Hash, Debug, Clone, PartialEq, Eq, ScheduleLabel)]
-enum InternalGoapStage {
-    /// Internal stage to react to changed `ActionState`s from user `Action` systems.
+#[derive(Hash, Debug, Clone, PartialEq, Eq, SystemSet)]
+enum InternalGoapSet {
+    /// Internal system set to react to changed `ActionState`s from user `Action` systems.
     ActionStateTransition,
-    /// Internal stage to react to changed `ActorState`s from user `Actor` systems.
+    /// Internal system set to react to changed `ActorState`s from user `Actor` systems.
     ActorStateTransition,
 }

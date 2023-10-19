@@ -1,8 +1,8 @@
 use std::{any::TypeId, collections::HashMap};
 
-use bevy::prelude::{App, Component, Entity, Query, SystemSet, With};
+use bevy::prelude::{App, Component, Entity, IntoSystemConfigs, PostUpdate, Query, With};
 use bevy_goap::{
-    Action, ActionState, Actor, ActorState, Condition, EvaluationResult, GoapPlugin, GoapStage,
+    Action, ActionState, Actor, ActorState, Condition, EvaluationResult, GoapPlugin, GoapSet,
 };
 use rstest::rstest;
 
@@ -106,13 +106,15 @@ fn two_actions_cheapest_path_fixture() -> ActorTestCase {
 #[case(two_actions_cheapest_path_fixture())]
 fn integration_test(#[case] actor_test_case: ActorTestCase) {
     let mut app = App::new();
-    app.add_plugin(GoapPlugin);
-    app.add_system_set_to_stage(
-        GoapStage::Actions,
-        SystemSet::new()
-            .with_system(action_system::<GetAxeAction>)
-            .with_system(action_system::<ChopTreeAction>)
-            .with_system(action_system::<CollectWoodAction>),
+    app.add_plugins(GoapPlugin);
+    app.add_systems(
+        PostUpdate,
+        (
+            action_system::<GetAxeAction>,
+            action_system::<ChopTreeAction>,
+            action_system::<CollectWoodAction>,
+        )
+            .in_set(GoapSet::Actions),
     );
 
     app.world.spawn(actor_test_case.clone());

@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use bevy::prelude::{Commands, Component, Entity, EventReader, Query, Event};
+use bevy::prelude::{Commands, Component, Entity, Event, EventReader, Query};
 use pathfinding::prelude::astar;
 
 use crate::action::EvaluationResult;
