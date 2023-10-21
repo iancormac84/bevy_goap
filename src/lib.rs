@@ -38,17 +38,9 @@ impl Plugin for GoapPlugin {
         // We add InternalGoapSet::ActorStateTransition for change detection of ActorStates for Actors that may require a new plan.
         app.configure_sets(
             PostUpdate,
-            InternalGoapSet::ActionStateTransition.after(GoapSet::Actions),
+            (GoapSet::Actions, InternalGoapSet::ActionStateTransition, GoapSet::Actors, InternalGoapSet::ActorStateTransition).chain(),
         )
-        .configure_sets(
-            PostUpdate,
-            GoapSet::Actors.after(InternalGoapSet::ActionStateTransition),
-        )
-        .configure_sets(
-            PostUpdate,
-            InternalGoapSet::ActorStateTransition.after(GoapSet::Actors),
-        )
-        .add_systems(PostUpdate, action_state_system)
+        .add_systems(PostUpdate, action_state_system.in_set(InternalGoapSet::ActionStateTransition))
         .add_systems(
             PostUpdate,
             (
